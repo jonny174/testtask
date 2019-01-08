@@ -1,0 +1,99 @@
+buildscript {
+    repositories {
+        jcenter()
+        maven {
+            url "https://plugins.gradle.org/m2/"
+        }
+    }
+    dependencies {
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+        classpath "com.netflix.nebula:gradle-ospackage-plugin:${ospackageVersion}"
+    }
+}
+
+apply plugin: 'idea'
+apply plugin: 'java'
+apply plugin: 'org.springframework.boot'
+apply plugin: 'io.spring.dependency-management'
+apply plugin: 'nebula.ospackage'
+
+
+tasks.withType(JavaCompile) {
+    options.encoding = 'UTF-8'
+}
+
+group 'ru.mts'
+version '1.0.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+repositories {
+    jcenter()
+}
+
+ospackage {
+    packageName = "${project.name}-service"
+    os = LINUX
+    release = '1'
+    user = 'root'
+
+    from(jar.outputs.files) {
+        into "/opt/$project.name/"
+    }
+
+    from("$project.buildDir/testtask.service") {
+        into '/etc/systemd/system/'
+    }
+}
+
+buildRpm {
+    requires('java-1.8.0-openjdk')
+}
+
+buildDeb {
+    requires('openjdk-8-jre')
+}
+
+
+task createServiceFile() {
+    def serviceFile = file("$project.buildDir/testtask.service")
+    project.buildDir.exists() ?: project.buildDir.mkdir()
+    !serviceFile.exists() ?: serviceFile.delete()
+    serviceFile <<
+            """[Unit]
+Description=Test Task Service
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/$project.name
+ExecStart=/usr/bin/java -jar /opt/${project.name}/${project.name}-${project.version}.jar
+
+[Install]
+WantedBy=multi-user.target
+"""
+}
+
+buildDeb.dependsOn(createServiceFile, bootJar)
+buildRpm.dependsOn(createServiceFile, bootJar)
+
+
+dependencies {
+    implementation 'org.springframework.boot:spring-boot-starter'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    compileOnly "org.projectlombok:lombok:${lombokVersion}"
+    implementation "org.modelmapper:modelmapper:${modelMapperVersion}"
+    implementation "org.postgresql:postgresql:${postgreVersion}"
+    implementation "io.springfox:springfox-swagger2:${swaggerVersion}"
+    implementation "io.springfox:springfox-swagger-ui:${swaggerVersion}"
+    annotationProcessor "org.springframework.boot:spring-boot-configuration-processor"
+    annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
+}
+
+wrapper {
+    gradleVersion = '4.10'
+}

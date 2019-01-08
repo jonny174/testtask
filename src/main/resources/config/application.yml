@@ -1,0 +1,37 @@
+version: v1
+
+executors:
+  thread-pool-size: 5
+  thread-pool-max-size: 10
+  scheduled-pool-size: 10
+  delay-before-start-in-minutes: 2
+
+spring:
+  datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://localhost:5432/taskbase
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate.dialect: org.hibernate.dialect.PostgreSQL95Dialect
+      hibernate.temp.use_jdbc_metadata_defaults: false
+
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,env
+      base-path: /
+      path-mapping:
+        health: status
+info:
+  app-name: Test task service
+  last changes: Implemented the process of formation and monitoring of a task
+  version: ${version}
+
+logging.level.ru.mts.testtask: DEBUG
+logging.file: testtask.log
